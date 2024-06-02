@@ -1,16 +1,29 @@
 from unstructured.chunking.basic import chunk_elements
 from unstructured.chunking.title import chunk_by_title
+from unstructured.partition.pdf import partition_pdf
+from unstructured.cleaners.core import clean_bullets, clean_non_ascii_chars, clean_extra_whitespace
 
 from openai import OpenAI
 import os 
 OPENAI_KEY = os.getenv('OPENAI_API_KEY')
 client = OpenAI(api_key=OPENAI_KEY)
 
+
 '''
 Alternative strategy since a lot of list items are misclassified as NarrativeText is to chunk by title if we find any lists in the pdf
 '''
 
 def smart_chunking(elements):
+    """
+    Smart chunking function that separates paragraph elements from other elements.
+
+    Args:
+        elements (list): List of Unstructured elements.
+
+    Returns:
+        list: List of chunked elements.
+    """
+        
     paragraph_elements = []
     other_elements = []
 
@@ -27,6 +40,16 @@ def smart_chunking(elements):
     return final_chunks
 
 def cheat_chunking(elements):
+    """
+    Chunking function that selects chunking method based on document elements.
+
+    Args:
+        elements (list): List of Unstructured elements.
+
+    Returns:
+        list: List of chunked elements.
+    """
+        
     chunk_with_title = False
     for e in elements:
         if e.to_dict()['type'] not in ['Title','NarrativeText','UncategorizedText']:
@@ -37,6 +60,16 @@ def cheat_chunking(elements):
         return chunk_elements(elements=elements,max_characters=1000,new_after_n_chars=0)
     
 def openai_summarize_string(text):
+    """
+    Generates a summary of the given string using GPT-based model completion.
+
+    Args:
+        text (str): Input text to summarize.
+
+    Returns:
+        str: Generated summary.
+    """
+        
     prompt = f"Summarize the given string (this can be a piece of text or html of a table) concisely in less than 50 characters: " + text
     completion = client.chat.completions.create(
         model="gpt-4o",
@@ -48,7 +81,15 @@ def openai_summarize_string(text):
     return completion.choices[0].message.content
 
 def get_global_context_with_titles(elements):
-    # Adding Global Context
+    """
+    Generates global context based on document titles.
+
+    Args:
+        elements (list): List of Unstructured elements.
+
+    Returns:
+        str: Global context string.
+    """
     file_title =''
     element_metadata= elements[0].to_dict()
     if element_metadata['type'] == 'Title':
@@ -71,6 +112,15 @@ def prepend_chunk_text(chunks,prepend_text):
 
 
 def custom_chunking_methods(chunks,elements,use_ai_summary=False):
+    """
+    Custom chunking methods for preprocessing chunks.
+
+    Args:
+        chunks (list): List of chunked elements.
+        elements (list): List of Unstructured elements.
+        use_ai_summary (bool, optional): Whether to use AI summary. Defaults to False.
+    """
+
     # Make sure for Tables, the text that will be vectorized later on is the summary of the table
     # not the html too semantically more dense
     for c in chunks:
@@ -89,6 +139,52 @@ def custom_chunking_methods(chunks,elements,use_ai_summary=False):
 
     # get global context by the summary 
     prepend_chunk_text(chunks,global_context_prepend)
+
+def preprocess_elements(elements):
+    for e in elements:
+        e.apply(clean_bullets)
+        e.apply(clean_non_ascii_chars)
+        e.apply(clean_extra_whitespace)
+        if len(e.text) == 0:
+            elements.remove(e)
+
+
+
+
+def ingest_pdf(file_path,vectore_store,database):
+    """
+    Ingests a PDF file into FAISS and mySQL.
+
+    Args:
+        file_path (str): Path to the PDF file.
+        vectore_store (FaissIndexManager): Instance of FaissIndexManager.
+        database (mySQLManager): Instance of mySQLManager.
+    """
+    # hi_res the only strategy tht does pictures and tables. 
+    # infer_table_structure keeps html version of the table
+    # BUG! with infer_table_structure=True: https://github.com/Unstructured-IO/unstructured/issues/2089#issuecomment-2028908968
+    elements = partition_pdf(file_path,strategy='hi_res',infer_table_structure=False)
+
+    preprocess_elements(elements)
+    print(f"{len(elements)} pdf elements created with Unstructured from {file_path}")
+
+    chunk_elements_pdf = cheat_chunking(elements)
+
+    print(f"{len(chunk_elements_pdf)} chunks created from the elements")
+
+    custom_chunking_methods(chunk_elements_pdf,elements,use_ai_summary=True)
+
+    vectore_store.store_chunks(chunk_elements_pdf)
+
+    for chunk in chunk_elements_pdf:
+        if chunk.to_dict()['type'] == 'Table':
+            print('Table detected - storing raw html instead of text')
+            database.insert_chunk(chunk.id,chunk.to_dict()['metadata']['text_as_html'])
+        else:
+            database.insert_chunk(chunk.id, chunk.text)
+    print(f"{len(chunk_elements_pdf)} chunks insert succesfully into mySQL")
+
+    print('Finished ingesting PDF into FAISS and mySQL',file_path)
 
 # def find_desired_chunking_length(elements):
 #     max_length = 10000
