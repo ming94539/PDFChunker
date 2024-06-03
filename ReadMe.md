@@ -1,6 +1,6 @@
 ## Intro
 This repo illustrates different RAG strategies for PDF documents. It is implemented with custom Chunking/Ingesting functions without using Langchain or Llamaindex. 
-PDFs are hard to ingest properly for RAG applications due to lack of structure and variety of data types (Tables, Forms, Images, Titles, etc.). 
+PDFs are hard to ingest properly for RAG applications due to lack of structure and high variety of data types (Tables, Forms, Images, Titles, etc.) that are hard to exract out accurately.
 This will be a multi-modal RAG app on a folder of given PDFs.
 
 ## Install and Run
