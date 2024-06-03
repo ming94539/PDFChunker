@@ -1,5 +1,7 @@
 ## Intro
-For practice purposes, this is an implementation of a RAG app that ingests PDFs by building my own chunking/etl functions - without using langchain/llamaindex.
+This repo illustrates different RAG strategies for PDF documents. It is implemented with custom Chunking/Ingesting functions without using Langchain or Llamaindex. 
+PDFs are hard to ingest properly for RAG applications due to lack of structure and variety of data types (Tables, Forms, Images, Titles, etc.). 
+This will be a multi-modal RAG app on a folder of given PDFs.
 
 ## Install and Run
 Put your pdfs in /docs and it will build a SQL Database and FAISS Vector Store using those PDFs.
