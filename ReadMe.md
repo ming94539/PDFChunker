@@ -19,13 +19,23 @@ Put your pdfs in /docs and it will build a SQL Database and FAISS Vector Store u
 1. **Look ahead chunking**: Evaluate what elements are in the pdf then decide chunking strategy - using infer_table_structure, chunk_by_title, high-res, etc. 
     a. **Pros**: Improve accuracy by using the right methods
     b. **Cons**: If it's a long pdf with a mix of different element types and will be hard that require different strategy, it will be complex to determine which part of the pdf to apply which strategy. E.G. Table, Lists, and Paragraph on the same page
+   
 2. **Injecting global context with LLM Summary**: Adding document level summaries to each chunk since chunks lack global concept awareness. For more complex documents with many sub-themes (like chapters of a book) there can even be subdoc summaries to create more hierarchical metadata.
     a. **Pros**: Improve accuracy for questions that require global context. E.G. Summary of an entire doc
     b. **Cons**: It can potentially introduces more noise to your embeddings since all your chunks have the same global context. One remedy to this could be to just have the embedding to be the text without global context but have the corresponding text include the global context but it still might lower the chunk retrieval recall for queries that mention global context explicitly.
+   
 3.  **Injecting global context with Table of Contents**: Instead of LLM Summary, use all the titles in the pdf to provide a rough summary or table of content
     a. **Pros**: Way faster and cheaper to compute than a LLM call
     b. **Cons**: May not be as accurate since the pdf titles may not reflect enough of the global context.
+    
 4.  **Chunking Tables**: Instead of vectorizing the table directly. We summarize the table beforehand and vectorize that, then pass the raw html format of the table since LLM process that better.
     a. **Pros**: More accurate.
     b. **Cons**: You may not have access to the html format of the table (or at least good quality) depending on your PDF Extraction library.
+    
+5.  **Chunking Tables**: Instead of vectorizing the table directly. We summarize the table beforehand and vectorize that, then pass the raw html format of the table since LLM process that better.
+    a. **Pros**: More accurate in retrieval stage.
+    b. **Cons**: You may not have access to the html format of the table (or at least good quality) depending on your PDF Extraction library.
 
+6.  **Chunking Image**: Similar to Tables, instead of vectorizing the image directly, we summarize the image beforehand and vectorize that for better retrieval. When in answer generation, we pass the raw image (encoded in base64) for the LLM to get the complete image in its context window.
+    a. **Pros**: More accurate in retrieval stage.
+    b. **Cons**: Generally more expensive. You could do an extra pre-process step to filter out filler images (icons, logos) that are not relevant which can turn into a non-trivial problem too in itself.
