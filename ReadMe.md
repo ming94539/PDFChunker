@@ -30,12 +30,12 @@ Put your pdfs in /docs and it will build a SQL Database and FAISS Vector Store u
     
 4.  **Chunking Tables**: Instead of vectorizing the table directly. We summarize the table beforehand and vectorize that, then pass the raw html format of the table since LLM process that better.
     a. **Pros**: More accurate.
-    b. **Cons**: You may not have access to the html format of the table (or at least good quality) depending on your PDF Extraction library.
+    b. *Cons**: You may not have access to the html format of the table (or at least good quality) depending on your PDF Extraction library.
     
 5.  **Chunking Tables**: Instead of vectorizing the table directly. We summarize the table beforehand and vectorize that, then pass the raw html format of the table since LLM process that better.
-    a. **Pros**: More accurate in retrieval stage.
-    b. **Cons**: You may not have access to the html format of the table (or at least good quality) depending on your PDF Extraction library.
+   a. *Pros**: More accurate in retrieval stage.
+   b. *Cons**: You may not have access to the html format of the table (or at least good quality) depending on your PDF Extraction library.
 
 6.  **Chunking Image**: Similar to Tables, instead of vectorizing the image directly, we summarize the image beforehand and vectorize that for better retrieval. When in answer generation, we pass the raw image (encoded in base64) for the LLM to get the complete image in its context window.
-    a. **Pros**: More accurate in retrieval stage.
+    a. Pros**: More accurate in retrieval stage.
     b. **Cons**: Generally more expensive. You could do an extra pre-process step to filter out filler images (icons, logos) that are not relevant which can turn into a non-trivial problem too in itself.
